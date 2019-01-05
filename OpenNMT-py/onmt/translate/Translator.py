@@ -49,6 +49,7 @@ class Translator(object):
 
         # Help functions for working with beams and batches
         def var(a): return Variable(a, volatile=True)
+        #def var(a): return Variable(a, requires_grad=False)
 
         def rvar(a): return var(a.repeat(1, beam_size, 1))
 
@@ -149,6 +150,7 @@ class Translator(object):
         # self.model.train()
         # get the state dicts (might be useful)
         state_dict = []
+        tt = torch.cuda if self.cuda else torch
         for k, v in self.model.state_dict().items():
             state_dict.append((k.encode('utf-8'), v))
 
@@ -156,7 +158,7 @@ class Translator(object):
         selected_pred = ret['predictions'][0][0] # hard coded selection - assuming the first one has lowest ppl
 
         # turn the selected prediction into matrix that decoder can take for teacher forcing
-        selected_pred = torch.cuda.LongTensor(selected_pred).view(len(selected_pred), 1, 1)
+        selected_pred = tt.LongTensor(selected_pred).view(len(selected_pred), 1, 1)
 
         # run the encoder to get the matrix of hidden states (for hook it up to get the gradients wrt outputs)
         enc_states, context = self.model.encoder(src, src_lengths)
@@ -166,8 +168,8 @@ class Translator(object):
         dec_states = self.model.decoder.init_decoder_state(src, context, enc_states)
         # 2) run one step
         # set_trace()
-        inp = Variable(torch.cuda.LongTensor([self.fields['tgt'].vocab.stoi['<s>']]).unsqueeze(0).unsqueeze(2))
-        all_saliency = torch.cuda.FloatTensor(src.size(0), selected_pred.size(0), dec_states.hidden[0].size(2))
+        inp = Variable(tt.LongTensor([self.fields['tgt'].vocab.stoi['<s>']]).unsqueeze(0).unsqueeze(2))
+        all_saliency = tt.FloatTensor(src.size(0), selected_pred.size(0), dec_states.hidden[0].size(2))
         for i in range(len(selected_pred)):
             self.model.zero_grad()
             # Turn any copied words to UNKs
@@ -196,7 +198,7 @@ class Translator(object):
             # store saliency to tensor
             all_saliency[:, i] = saliency.squeeze(1)
             # update next input using "teacher forcing"
-            inp = Variable(torch.cuda.LongTensor([selected_pred[i]]).unsqueeze(0).unsqueeze(2))
+            inp = Variable(tt.LongTensor([selected_pred[i]]).unsqueeze(0).unsqueeze(2))
             # visualize
             # set_trace()
             # # plt.figure(figsize=(20, 50))
