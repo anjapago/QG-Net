@@ -51,7 +51,8 @@ QA_scheme = 2
 
 # opt.model = '/home/jack/Documents/QA_QG/lan-model/results/2.4.2018/model_acc_46.69_ppl_23.55_e12.pt'
 # opt.batch_size = batch_size
-opt.gpu = 0
+#opt.gpu = 0
+opt.gpu = -1
 
 def main():
     dummy_parser = argparse.ArgumentParser(description='train.py')
@@ -194,7 +195,10 @@ def main():
             plt.colorbar(im)
             # set_trace()
             # plt.show()
-            plt.savefig('attention_visualizations_LSTM_attn/attn_vis_' + str(counter+1) +
+            figdir="attention_visualizations_LSTM_attn"
+            if not os.path.exists(figdir):
+                os.makedirs(figdir)
+            plt.savefig(figdir+'/attn_vis_' + str(counter+1) +
                         "(" + opt.src.split('/')[1] + ").png")
 
         ##########################
